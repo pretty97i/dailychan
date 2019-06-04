@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+  
+ <mapper namespace="helpMapper">
+ 
+
+ <!-- notice -->
+ <select id="maxNum" resultType="int">
+ 	select nvl(max(notice_id),0) from notice
+ </select>
+ 
+ <insert id="insertData" parameterType="com.chan.dto.HelpDTO">
+ 	insert into notice(notice_id,notice_subject,notice_content,notice_saveFileName,notice_created) 
+ 	values (#{notice_id},#{notice_subject},#{notice_content},#{notice_saveFileName},sysdate)
+ </insert>
+ 
+ <select id="getDataCount" parameterType="hashMap" resultType="int">
+ 	select nvl(count(*),0) from notice
+ 	where ${searchKey} like '%' || #{searchValue} || '%'
+ </select>
+ 
+ <select id="getLists" parameterType="hashMap" resultType="com.chan.dto.HelpDTO">
+ 	select * from (
+ 	select rownum rnum,data.* from (
+ 	select notice_id,notice_subject,to_char(notice_created,'YYYY-MM-DD') notice_created
+ 	from notice where ${searchKey} like '%' || #{searchValue} || '%'
+ 	order by notice_id desc) data)
+ <![CDATA[
+ 	where rnum>=#{start} and rnum<=#{end}
+ ]]>
+ </select>
+
+ <select id="getReadData" parameterType="int" resultType="com.chan.dto.HelpDTO">
+ 	select notice_id,notice_subject,notice_content,to_char(notice_created,'YYYY-MM-DD') notice_created ,notice_saveFileName
+ 	from notice where notice_id=#{notice_id}
+ </select>
+
+
+ <delete id="deleteData" parameterType="int">
+ 	delete notice where notice_id = #{notice_id}
+ </delete>
+
+
+
+
+<!-- faq -->
+
+ <select id="faqGetLists" parameterType="hashMap" resultType="com.chan.dto.HelpDTO">
+ select * from ( 
+ select rownum rnum,data.* from(
+ select faq_id,faq_subject,faq_content,faq_division from faq
+	where faq_division like '%' || #{faq_division} || '%' and faq_subject like '%' || #{search} || '%')data)
+  <![CDATA[
+ 	where rnum>=#{start} and rnum<=#{end}
+ ]]>
+ 
+ </select>
+ 
+  <select id="faqDataCount" parameterType="String" resultType="int">
+ 	select nvl(count(*),0) from faq where faq_division like '%' || #{faq_division} || '%' 
+
+ </select>
+ 
+ 
+<!-- checkjuso -->
+ 
+<select id="dayBreak" parameterType="String" resultType="int">
+	select distinct count(*) from checkjuso
+	where #{juso} like '%' || addr1 ||'%' and addr1 is not null
+</select>
+
+<select id="storeDelivery" parameterType="String" resultType="int">
+	select distinct count(*) from checkjuso
+	where #{juso} like '%' || addr2 ||'%' and addr2 is not null
+</select>
+ 
+ 
+ 
+<!-- qna(1:1) -->
+ <select id="qnaMaxNum" resultType="int">
+ 	select nvl(max(qna_id),0) from qna
+ </select>
+
+ <insert id="insertqna" parameterType="com.chan.dto.HelpDTO">
+ insert into qna (qna_id,join_id,qna_select,qna_type,qna_subject,qna_content,qna_created,qna_state,qna_saveFileName,qna_store)
+ values (#{qna_id},#{join_id},#{qna_select},#{qna_type},#{qna_subject},#{qna_content},sysdate,#{qna_state},#{qna_saveFileName},#{qna_store})
+ </insert>
+ 
+ 
+ <select id="qnaGetLists" parameterType="hashMap" resultType="com.chan.dto.HelpDTO">
+	 	select * from (
+ 	select rownum rnum,data.* from (
+ 	select qna_id,qna_select,qna_type,qna_subject,to_char(qna_created,'YYYY-MM-DD') qna_created,qna_state
+ 	from qna  where join_id=#{join_id}
+ 	order by qna_id desc) data)
+ <![CDATA[
+ 	where rnum>=#{start} and rnum<=#{end}
+ ]]>
+ </select>
+ 
+ 
+  <select id="qnagetDataCount" resultType="int">
+ 	select nvl(count(*),0) from qna
+ </select>
+ 
+ 
+ <select id="qnaGetReadData" parameterType="int" resultType="com.chan.dto.HelpDTO">
+ 	select qna_id,qna_select,qna_type,qna_id,qna_subject,qna_content ,qna_saveFileName,qna_store,qna_reply
+ 	from qna where qna_id=#{qna_id}
+ </select>
+ 
+ 
+  <delete id="qnadeleteData" parameterType="int">
+ 	delete qna where qna_id = #{qna_id}
+ </delete>
+ 
+ <!-- 관리자 답변달기  -->
+ <update id="qnaAdminReply" parameterType="com.chan.dto.HelpDTO">
+ 	update qna set qna_state=#{qna_state,jdbcType=VARCHAR} ,qna_reply=#{qna_reply,jdbcType=VARCHAR} where qna_id=#{qna_id}
+ </update>
+ 
+ 
+ </mapper>

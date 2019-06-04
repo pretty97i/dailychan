@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="mainMapper">
+
+<!-- 고객 추천 -->
+<select id="mainRecommandLists" resultType="com.chan.dto.MainDTO">
+	select * from (
+	select rownum productRecommand_num,data.* from(
+	select product_id,product_subject,product_price,product_discount,product_resultPrice,product_like,
+	product_firstSelect,product_secondSelect,product_lastSelect,product_mainSaveFileName from product
+	order by product_recommand desc) data)
+	<![CDATA[
+	where productRecommand_num>=1 and productRecommand_num<=3
+	]]>
+</select>
+
+<select id="noticeLists" resultType="com.chan.dto.MainDTO">
+	select * from (
+	select rownum rnum,data.* from (
+	select notice_id,notice_subject,to_char(notice_created,'YYYY-MM-DD') notice_created
+	from notice order by notice_id desc) data)
+<![CDATA[
+	where rnum>=1 and rnum<=5
+]]>
+</select>
+<!-- //고객 추천 -->
+
+<!-- bestProduct -->
+	<!-- bestList -->
+	<select id="getBestLists" parameterType="String" resultType="com.chan.dto.MainDTO">
+		select * from (
+		select rownum rnum, data.* from (
+		select * from product where product_secondSelect=#{product_secondSelect} order by product_saleCount desc) data)
+		<![CDATA[
+		where rnum>=1 and rnum<=4
+		]]>
+	</select>
+<!-- //bestProduct -->	
+	
+<!-- 메인창에 띄우는 레시피 -->
+	<select id="getMainRecipeFirst" resultType="com.chan.dto.RecipeDTO">
+		select recipe_id, recipe_subject, recipe_select,recipe_mainSaveFileName,recipe_contentSaveFileName 
+		from recipe where recipe_id=(select nvl(count(*),0) from recipe)
+	</select>
+	
+	<select id="getMainRecipeSecond" resultType="com.chan.dto.RecipeDTO">
+		select recipe_id, recipe_subject, recipe_select,recipe_mainSaveFileName,recipe_contentSaveFileName 
+		from recipe where recipe_id=(select nvl(count(*),0) from recipe)-1
+	</select>
+<!-- //메인창에 띄우는 레시피 -->
+
+<!-- 메인 오감동! -->
+	<select id="Oimpression"  resultType="com.chan.dto.MainDTO">
+	select * from (
+	select rownum Num,data.* from(
+	select * from product where product_firstselect='오!감동'
+	order by product_id desc) data) 
+	<![CDATA[
+	where Num<=4
+	]]>
+	</select>
+<!-- //메인 오감동! -->
+</mapper>

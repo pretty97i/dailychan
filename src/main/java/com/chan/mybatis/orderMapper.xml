@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="order">
+
+<insert id="insertReviewCheck" parameterType="com.chan.dto.OrderDTO">
+	insert into reviewCheck (reviewCheck_id,join_id,orderList_id,productOrder_id,reviewCheck_check) values
+	((select nvl(max(reviewCheck_id),0)+1 from reviewCheck),#{join_id},#{orderList_id},#{productOrder_id},'1')
+</insert>
+
+<select id="userData" parameterType="String" resultType="com.chan.dto.OrderDTO">
+	select join_name,join_phone,join_addrNum,join_addr1,join_addr2,join_point from join
+	where join_id = #{join_id}
+</select>
+
+<select id="dayBreak" parameterType="String" resultType="String">
+	select distinct addr1 from checkjuso
+	where #{juso} like '%' || addr1 ||'%' and addr1 is not null
+</select>
+
+<select id="storeDelivery" parameterType="String" resultType="String">
+	select distinct addr2 from checkjuso
+	where #{juso} like '%' || addr2 ||'%' and addr2 is not null
+</select>
+
+<select id="paymentCartList" parameterType="hashMap" resultType="com.chan.dto.OrderDTO">
+	select * from (
+	select rownum rnum, data.* from (
+	select cart_id,join_id,product_id,product_subject,product_mainSaveFileName,
+	product_price,product_discount,product_resultPrice,product_saleLimit,cart_quantity
+	from cart 
+	where join_id = #{join_id} and cart_id = #{cart_id}
+	order by cart_id desc) data)
+	<![CDATA[
+	where rnum>=#{start} and rnum<=#{end}
+	]]>
+</select>
+
+<select id="paymentCartData" parameterType="hashMap" resultType="com.chan.dto.OrderDTO">
+	select cart_id,join_id,product_id,product_subject,product_mainSaveFileName,
+	product_price,product_discount,product_resultPrice,product_saleLimit,cart_quantity
+	from cart where join_id = #{join_id} and product_id = #{product_id}
+</select>
+
+<select id="payCouponList" parameterType="String" resultType="com.chan.dto.OrderDTO">
+	select coupon_id,coupon_price from coupon
+	where join_id = #{join_id} and coupon_use = '1'
+	order by coupon_price desc
+</select>
+
+<!-- 결제 완료 후 -->
+<insert id="insertPoint" parameterType="map">
+	insert into point (point_id,join_id,point_score,point_created,point_content,point_use,orderList_id) values
+	((select nvl(max(point_id),0)+1 from point),#{join_id},#{point_score},
+	to_char(sysdate,'YYYY-MM-DD'),#{point_content},#{point_use},#{orderList_id})
+</insert>
+
+<select id="getPointId" resultType="int">
+	select nvl(max(point_id),0) from point
+</select>
+
+<update id="updatePoint" parameterType="map">
+	update point set orderList_id = #{orderList_id}
+	where point_id = #{point_id}
+</update>
+
+<update id="joinUpdatePointMinus" parameterType="map">
+	update join set join_point = join_point - #{point_score}
+	where join_id = #{join_id}
+</update>
+
+<update id="joinUpdatePointPlus" parameterType="map">
+	update join set join_point = join_point + #{point_score}
+	where join_id = #{join_id}
+</update>
+
+<insert id="insertOrderList" parameterType="com.chan.dto.OrderDTO">
+	insert into orderList (orderList_id,join_id,coupon_id,point_id,orderList_created,orderList_naturePackage,
+	orderList_recyclePackage,orderList_step,orderList_productCount,orderList_resultPrice,orderList_message,
+	orderList_reciveName,orderList_recivePhone,orderList_reciveAddrNum,orderList_reciveAddr1,orderList_reciveAddr2,
+	orderList_store,orderList_retrieve,orderList_payment,orderList_sendName,orderList_sendPhone,orderList_delivery)
+	values
+	((select nvl(max(orderList_id),0)+1 from orderList),#{join_id},#{coupon_id},#{point_id},to_char(sysdate,'YYYY-MM-DD'),
+	#{orderList_naturePackage},#{orderList_recyclePackage},#{orderList_step},#{orderList_productCount},
+	#{orderList_resultPrice},#{orderList_message},#{orderList_reciveName},#{orderList_recivePhone},
+	#{orderList_reciveAddrNum},#{orderList_reciveAddr1},#{orderList_reciveAddr2},#{orderList_store},
+	#{orderList_retrieve},#{orderList_payment},#{orderList_sendName},#{orderList_sendPhone},#{orderList_delivery})
+</insert>
+
+<select id="getOrderListId" resultType="int">
+	select nvl(max(orderList_id),0) from orderList
+</select>
+ 
+<insert id="insertProductOrder" parameterType="com.chan.dto.OrderDTO">
+	insert into productorder (orderList_id,join_id,product_id,product_subject,product_resultPrice,cart_quantity,productOrder_id,product_mainSaveFileName)
+	values (#{orderList_id},#{join_id},#{product_id},#{product_subject},#{product_resultPrice},#{cart_quantity},#{productOrder_id},#{product_mainSaveFileName})
+</insert>
+
+<update id="updateAddress" parameterType="com.chan.dto.OrderDTO">
+	update join set join_addrNum = #{join_addrNum}, join_addr1 = #{join_addr1}, join_addr2 = #{join_addr2}
+	where join_id = #{join_id}
+</update>
+
+<delete id="deleteCartList" parameterType="int">
+	delete cart where cart_id = #{cart_id}
+</delete>
+
+<update id="updateUseCoupon" parameterType="map">
+	update coupon set coupon_use = 0
+	where coupon_id = #{coupon_id} and join_id = #{join_id}
+</update>
+
+<select id="getProductId" parameterType="int" resultType="com.chan.dto.OrderDTO">
+	select product_id,cart_quantity from cart where cart_id = #{cart_id}
+</select>
+
+<update id="ogamdongUpdateProductSaleCount" parameterType="map">
+	update product set product_saleCount = product_saleCount + #{cart_quantity},product_stock = product_stock - #{cart_quantity}
+	where product_id = #{product_id}
+</update>
+
+<update id="updateProductSaleCount" parameterType="map">
+	update product set product_saleCount = nvl(product_saleCount,0) + #{cart_quantity},
+	product_stock = product_stock - #{cart_quantity},product_saleLimit = product_saleLimit - #{cart_quantity}
+	where product_id = #{product_id}
+</update>
+
+<select id="productReadData" parameterType="int" resultType="String">
+ 	select product_firstSelect from product
+ 	where product_id = #{product_id}
+</select>
+
+</mapper>

@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="JoinMapper">
+
+	<!-- 가입 쿠폰 -->
+	<insert id="JoinCoupon" parameterType="com.chan.dto.JoinDTO">
+		insert into coupon(coupon_id,join_id,coupon_price,coupon_startDate,coupon_endDate,coupon_use)values(
+		(select nvl(max(coupon_id),0) from coupon)+1,#{join_id},5000,sysdate,ADD_MONTHS(sysdate, 3),1)
+	</insert>
+
+	<!-- 삽입 -->
+	<insert id="insertData" parameterType="com.chan.dto.JoinDTO">
+	 	insert into join (join_id,join_password,join_name,join_phone,
+	 	join_email,join_recommender,join_snsAgree,join_emailAgree,join_point,join_created) values (#{join_id},#{join_password,jdbcType=VARCHAR},
+	 	#{join_name,jdbcType=VARCHAR},#{join_phone,jdbcType=VARCHAR},#{join_email,jdbcType=VARCHAR},#{join_recommender,jdbcType=VARCHAR},#{join_snsAgree,jdbcType=VARCHAR},#{join_emailAgree,jdbcType=VARCHAR},#{join_point,jdbcType=VARCHAR},sysdate)
+	
+	</insert>
+	
+	<!-- 네이버 회원가입 -->
+	<insert id="insertNaverData" parameterType="com.chan.dto.JoinDTO">
+	 	insert into join (join_id,join_password,join_name,join_phone,
+	 	join_email,join_recommender,join_snsAgree,join_emailAgree,join_point,join_created) values (substr(#{join_id,jdbcType=VARCHAR},1,(instr(#{join_id,jdbcType=VARCHAR},',')-1)),#{join_password,jdbcType=VARCHAR},
+	 	#{join_name,jdbcType=VARCHAR},#{join_phone,jdbcType=VARCHAR},#{join_email,jdbcType=VARCHAR},#{join_recommender,jdbcType=VARCHAR},#{join_snsAgree,jdbcType=VARCHAR},#{join_emailAgree,jdbcType=VARCHAR},#{join_point,jdbcType=VARCHAR},sysdate)
+	
+	</insert>
+	
+	<!-- 추천인 포인트 적립검사 
+	<insert id="RecommendIdPoint"  parameterType="com.chan.dto.JoinDTO" >
+		insert into join (join_id,join_recommender,join_point) values (#{join_id},#{join_recommender,jdbcType=VARCHAR},#{join_point})
+	</insert>
+	-->
+	<update id="RecommendIdPointChange"  parameterType="com.chan.dto.JoinDTO">
+		update join set join_point=#{join_point} where join_id=#{join_id}
+	</update>
+
+	<!-- 로그인  -->
+	<select id="loginCheck" parameterType="com.chan.dto.JoinDTO" resultType="String">
+		select join_id from join where join_id=#{join_id} and join_password=#{join_password}
+	</select>
+	
+	<!-- 네아로 가입여부 확인 -->
+	<select id="naverCheck" parameterType="String" resultType="String">
+		select join_id from join where join_id=#{naver_id} 
+	</select>
+
+	<!-- 아이디 중복검사 -->
+	<select id="checkUserId" parameterType="String" resultType="String">
+		select join_id from join where join_id = #{join_id,jdbcType=VARCHAR}
+	</select>
+	
+	<!-- 추천인 존재여부검사 -->
+	<select id="checkRecommendId" parameterType="String" resultType="String">
+		select join_id from join where join_id = #{join_id,jdbcType=VARCHAR}
+	</select>
+	
+	<!-- 추천인 point 지급 -->
+	<update id="recommenderPointUpdate" parameterType="String">
+	update join set join_point = nvl(join_point,0) + 5000
+	where join_id = #{join_id}
+    </update>
+	
+	<!-- 가입포인트 -->	
+	<insert id="joinPoint" parameterType="String">
+	 	insert into point (point_id,join_id,point_score,point_created,
+	 	point_content,point_use) values ((select nvl(max(point_id),0) from point)+1,#{join_id},5000,sysdate,
+	 	'가입친구추천 포인트',1)
+	</insert>
+	
+	<insert id="naverJoinPoint" parameterType="String">
+	 	insert into point (point_id,join_id,point_score,point_created,
+	 	point_content,point_use) values ((select nvl(max(point_id),0) from point)+1,substr(#{join_id,jdbcType=VARCHAR},1,(instr(#{join_id,jdbcType=VARCHAR},',')-1)),5000,sysdate,
+	 	'가입친구추천 포인트',1)
+	</insert>
+	
+	<!-- 휴대폰 중복검사checkTelAlreadyExists -->
+	<select id="checkTelAlreadyExists" parameterType="String" resultType="String">
+		select join_phone from join where join_phone = #{join_phone,jdbcType=VARCHAR}
+	</select>
+
+	<!-- 비밀번호 확인 -->
+	<select id="findPasswordChecked" parameterType="map" resultType="String">
+		select join_password from join where join_id = #{join_id,jdbcType=VARCHAR} and join_email=#{join_email,jdbcType=VARCHAR}
+	</select>
+
+	<!-- 아이디 확인 -->
+	<select id="findcheckId" parameterType="map" resultType="String">
+		select join_id from join where join_name = #{join_name,jdbcType=VARCHAR} and join_phone=#{join_phone,jdbcType=VARCHAR}
+	</select>
+	
+	<!-- 비밀번호 임시변경 -->
+	<update id="newPassword" parameterType="map">
+		update join set join_password = #{join_password} 
+		where join_email = #{join_email} and join_id = #{join_id}
+	</update>
+
+</mapper>

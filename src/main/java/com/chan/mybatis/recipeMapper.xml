@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="recipe">
+
+
+<select id="getRecipeMaxId" resultType="int">
+	select nvl(max(recipe_id),0) from recipe
+</select>
+
+<!-- insert -->
+<insert id="recipeInsertData" parameterType="com.chan.dto.RecipeDTO">
+ 	insert into recipe (recipe_id,recipe_subject,recipe_select,recipe_mainSaveFileName,recipe_contentSaveFileName)
+ 	values (#{recipe_id},#{recipe_subject},#{recipe_select},#{recipe_mainSaveFileName},#{recipe_contentSaveFileName})
+</insert>
+
+<!-- 전체갯수구하기 -->
+ <select id="getRecipeDataCount" parameterType="hashMap" resultType="int">
+ 	select nvl(count(*),0) from recipe
+ 	where recipe_subject like '%' || #{searchValue} || '%'
+ 	and recipe_select like '%' || #{recipe_select} || '%'
+ </select>
+
+<!-- 전체list -->
+<select id="getRecipeLists" parameterType="map" resultType="com.chan.dto.RecipeDTO">
+ 	select * from (
+ 	select rownum rnum,data.* from (
+ 	select recipe_id,recipe_subject,recipe_mainSaveFileName,recipe_select
+ 	from recipe where recipe_subject like '%' || #{searchValue} || '%'
+ 	and recipe_select like '%' || #{recipe_select} || '%'
+ 	order by recipe_id desc) data)
+ <![CDATA[
+ 	where rnum>=#{start} and rnum<=#{end}
+ ]]>
+ 	
+</select>
+
+<!-- 하나의 데이터  -->
+<select id="getRecipeReadData" parameterType="int" resultType="com.chan.dto.RecipeDTO">
+	select recipe_id,recipe_subject,recipe_contentSaveFileName,recipe_select
+ 	from recipe where recipe_id=#{recipe_id}
+</select>
+
+ <delete id="recipeDeleteData" parameterType="int">
+ 	delete recipe where recipe_id = #{recipe_id}
+ </delete>
+
+
+<insert id="insertMyrecipe" parameterType="com.chan.dto.RecipeDTO">
+	insert into myrecipe (join_id,recipe_id,recipe_select) values (#{join_id,jdbcType=VARCHAR},#{recipe_id},#{recipe_select,jdbcType=VARCHAR})
+
+</insert>
+
+
+<!-- 마이레시피리스트 -->
+<select id="getmyRecipeLists" parameterType="hashMap" resultType="com.chan.dto.RecipeDTO">
+ 
+select * from(
+ 	select rownum rnum, data.* from (
+ 	select DISTINCT b.recipe_id, b.recipe_subject, b.recipe_mainSaveFileName,a.join_id,a.recipe_select
+ 	from myrecipe a,recipe b where a.recipe_id=b.recipe_id and  a.join_id=#{join_id,jdbcType=VARCHAR} and  a.recipe_select like '%' ||#{recipe_select,jdbcType=VARCHAR} || '%' ) data)
+ <![CDATA[
+ 	where rnum>=#{start} and rnum<=#{end}
+ ]]>
+
+</select>
+
+<!-- 전체갯수구하기 -->
+ <select id="getmyRecipeDataCount" parameterType="String" resultType="int">
+ 	select nvl(count(*),0) from myrecipe
+ 	where join_id=#{join_id,jdbcType=VARCHAR}
+ </select>
+ 
+ <delete id="myRecipeDelete"  parameterType="int" >
+ 	delete myrecipe where recipe_id=#{recipe_id}
+ </delete>
+
+<!-- 마이레시피리스트 -->
+<select id="onlymyList" parameterType="String" resultType="com.chan.dto.RecipeDTO">
+  select recipe_id from myrecipe where join_id = #{join_id,jdbcType=VARCHAR}
+
+</select>
+
+</mapper>

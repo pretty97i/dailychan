@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="cartMapper">
+
+<!-- addCart// -->
+<select id="checkOverlap" parameterType="hashMap" resultType="int">
+	select nvl(count(product_id),0) from cart where product_id=#{product_id,jdbcType=VARCHAR} and join_id=#{join_id,jdbcType=VARCHAR}
+</select>
+
+<select id="findSameCart" parameterType="hashMap" resultType="int">
+	select cart_id from cart where product_id=#{product_id,jdbcType=VARCHAR} and join_id=#{join_id,jdbcType=VARCHAR}
+</select>
+
+
+<select id="productInfo" parameterType="int" resultType="com.chan.dto.CartDTO" >
+	select product_subject,product_mainSaveFileName,product_price,product_discount,product_resultPrice,product_saleLimit
+	from product where product_id = #{product_id,jdbcType=VARCHAR}
+</select>
+
+<select id="getCartMaxNum" resultType="int">
+	select nvl(max(cart_id),0) from cart
+</select>
+
+<insert id="insertCart" parameterType="com.chan.dto.CartDTO">
+	insert into cart(cart_id,join_id,product_id,product_subject,product_mainSaveFileName,
+	product_price,product_discount,product_resultPrice,product_saleLimit,cart_quantity)
+	values (#{cart_id,jdbcType=VARCHAR},#{join_id,jdbcType=VARCHAR},#{product_id,jdbcType=VARCHAR},
+	#{product_subject,jdbcType=VARCHAR},#{product_mainSaveFileName,jdbcType=VARCHAR},
+	#{product_price,jdbcType=VARCHAR},#{product_discount,jdbcType=VARCHAR},
+	#{product_resultPrice,jdbcType=VARCHAR},#{product_saleLimit,jdbcType=VARCHAR},#{cart_quantity,jdbcType=VARCHAR})
+</insert>
+<!-- //addCart -->
+
+
+<!-- CartList// -->
+<select id="getCartCount" resultType="int">
+	select nvl(count(*),0) from cart where join_id = #{join_id,jdbcType=VARCHAR}
+</select>
+
+<select id="totalCartPrice" parameterType="hashMap" resultType="com.chan.dto.CartDTO">
+	select * from (
+	select rownum rnum, data.* from (
+	select product_resultPrice,cart_quantity	from cart 
+	where join_id = #{join_id,jdbcType=VARCHAR}
+	order by cart_id desc) data)
+</select>
+
+<select id="getCartList" parameterType="hashMap" resultType="com.chan.dto.CartDTO">
+	select * from (
+	select rownum rnum, data.* from (
+	select cart_id,join_id,product_id,product_subject,product_mainSaveFileName,
+	product_price,product_discount,product_resultPrice,product_saleLimit,cart_quantity
+	from cart 
+	where join_id = #{join_id,jdbcType=VARCHAR}
+	order by cart_id desc) data)
+	<![CDATA[
+	where rnum>=#{start} and rnum<=#{end}
+	]]>
+</select>
+
+<select id="getCategroy" parameterType="int" resultType="com.chan.dto.CartDTO">
+	select product_firstSelect,product_secondSelect,product_lastSelect from product where product_id=#{product_id}
+</select>
+
+<delete id="deleteCartID" parameterType="int">
+	delete cart where cart_id=#{cart_id,jdbcType=VARCHAR}
+</delete>
+
+
+<update id="changeQuantity" parameterType="hashmap">
+	
+	update cart set cart_quantity = #{cart_quantity,jdbcType=VARCHAR}
+<![CDATA[	
+	 where cart_id = #{cart_id,jdbcType=VARCHAR} and product_saleLimit >= #{cart_quantity}
+]]>
+</update>
+
+<select id="getZzimMaxNum" resultType="int">
+	select nvl(max(zzimList_id),0) from zzimList
+</select>
+
+
+<update id="insertZzim" parameterType="com.chan.dto.CartDTO">
+	insert into zzimList (zzimList_id,join_id,product_id,product_subject,product_mainSaveFileName,product_price,product_discount,product_resultPrice) 
+values (#{zzimList_id},#{join_id},#{product_id},#{product_subject},#{product_mainSaveFileName},#{product_price},#{product_discount},#{product_resultPrice})
+</update>
+
+<select id="getOrderMaxNum" resultType="int">
+	select nvl(max(orderList_id),0) from productOrder
+</select>
+
+<select id="cartInfo" parameterType="int" resultType="com.chan.dto.CartDTO">
+	select product_id,product_subject,product_mainSaveFileName,product_resultprice,cart_quantity from cart where cart_id=#{cart_id}
+</select>
+
+</mapper>

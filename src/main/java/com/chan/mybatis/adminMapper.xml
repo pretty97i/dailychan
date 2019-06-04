@@ -1,0 +1,380 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="adminMapper">
+
+<!-- refund -->
+	<select id="getRefundCount" resultType="Integer">
+		select nvl(count(*),0) from refund where refund_state = 7
+	</select>
+	
+	<select id="getRefundList" parameterType="hashMap" resultType="com.chan.dto.AdminDTO">
+		select * from (
+		select rownum rnum, data.* from (
+		select join_id,to_char(refund_created,'YYYY-MM-DD') as refund_created,orderList_id,refund_subject,refund_saveFileName,orderList_resultPrice
+		from refund where refund_state=7 order by orderList_id desc) data)
+		<![CDATA[
+		where rnum>=#{start} and rnum<=#{end}
+		]]>
+	</select>
+	
+	<select id="getRefundDetailCount" parameterType="int" resultType="int">
+		select nvl(count(orderList_id),0) from productOrder where orderList_id = #{orderList_id}
+	</select>
+	
+	<select id="getDetailList" parameterType="hashMap" resultType="com.chan.dto.AdminDTO">
+		select * from (
+		select rownum rnum, data.* from (
+		select 	A.orderList_id,B.productOrder_id,B.product_subject,B.product_resultPrice,B.cart_quantity
+		from refund A,productOrder B 
+		where B.orderList_id = #{orderList_id} and A.orderList_id = B.orderList_id
+		order by A.orderList_id desc) data)
+		<![CDATA[
+		where rnum>=#{start} and rnum<=#{end}
+		]]>
+	</select>
+	
+	<select id="getRefundInfo" parameterType="int" resultType="com.chan.dto.AdminDTO">
+		select join_id,orderList_id,to_char(refund_created,'YYYY-MM-DD') refund_created,orderList_resultPrice,refund_saveFileName,refund_reason from refund
+		where orderList_id=#{orderList_id}
+	</select>
+	
+	<update id="changeRefundState" parameterType="int">
+		update refund set refund_state = 8 where orderList_id=#{orderList_id}
+	</update>
+	
+	<select id="checkInfo" parameterType="int"  resultType="com.chan.dto.AdminDTO">
+		select nvl(coupon_id,0) coupon_id,nvl(point_id,0) point_id from orderList where orderList_id=#{orderList_id}
+	</select>
+	
+	<update id="returnCoupon" parameterType="int">
+		update coupon set coupon_use = 1 where coupon_id = 
+		(select coupon_id from orderList where orderList_id =#{orderList_id} )
+	</update>
+	
+	<insert id="insertRefundPoint" parameterType="map">
+	 	insert into point (point_id,join_id,point_score,point_created,point_content,point_use)
+	 	values ((select nvl(max(point_id),0)+1 from point),#{join_id},#{point_score},to_char(sysdate,'YYYY-MM-DD'),'환불 승인에 따른 포인트 반환','1')
+	</insert>
+	
+	<select id="selectRefundPoint" parameterType="int" resultType="int">
+		select ((select orderList_resultPrice from orderList where orderList_id = #{orderList_id}) 
+		- (select point_score from point where orderList_id = #{orderList_id} and point_use=1) 
+		+ nvl((select point_score from point where orderList_id = #{orderList_id} and point_use=0),0)) from dual
+	</select>
+	
+	<update id="addRefundPoint" parameterType="hashMap">
+		update join set join_point = 
+		(join_point + (select orderList_resultPrice from orderList where orderList_id = #{orderList_id}) 
+		- (select point_score from point where orderList_id = #{orderList_id} and point_use=1) 
+		+ nvl((select point_score from point where orderList_id = #{orderList_id} and point_use=0),0)
+		) where join_id = (select join_id from orderList where orderList_id = #{orderList_id})
+	</update>
+	
+	<update id="changeProductOrderState" parameterType="int">
+		update orderList set orderList_step = 8 where orderList_id =#{orderList_id}
+	</update>
+	
+	<update id="refuseRefundState" parameterType="int">
+		update refund set refund_state = 9 where orderList_id =#{orderList_id}
+	</update>
+	
+	<update id="refuseProductOrderState" parameterType="int">
+		update orderList set orderList_step = 9 where orderList_id =#{orderList_id}
+	</update>
+	
+	<update id="permitRefundAll">
+		update refund set refund_state = 8 where refund_state=7
+	</update>
+	
+	
+	<update id="permitProductStateAll">
+		update orderList set orderList_step = 8 where orderList_step=7
+	</update>
+
+<!-- //refund -->
+<!-- 회원관리 -->
+
+	<select id="joinDataCount" parameterType="hashMap" resultType="int">
+		select nvl(count(*),0) from join where ${searchKey} like '%' || #{searchValue} || '%'
+	</select>
+	
+	<select id="joinList" parameterType="hashMap" resultType="com.chan.dto.AdminDTO">
+		select * from (
+		select rownum rnum,data.* from (
+		select join_id,join_name,join_phone,join_email,join_snsAgree,join_emailAgree
+		from join where ${searchKey} like '%' || #{searchValue} || '%') data)
+		<![CDATA[
+		where rnum>=#{start} and rnum<=#{end}
+		]]>
+	</select>
+		
+	<!-- 1개의 데이터 조회 -->
+	<select id="joinReadData" parameterType="String" resultType="com.chan.dto.AdminDTO">
+		select join_id,join_name,join_phone,join_email,join_snsAgree,join_emailAgree,join_addrNum,join_addr1,join_addr2,join_created from join where join_id=#{join_id}
+	</select>
+	
+	<delete id="joinDeleteData" parameterType="String">
+	 	delete join where join_id = #{join_id}
+	</delete>
+	
+	<update id="update" parameterType="com.chan.dto.AdminDTO">
+		update join set join_phone=#{join_phone,jdbcType=VARCHAR},join_addrNum=#{join_addrNum,jdbcType=VARCHAR},join_addr1=#{join_addr1,jdbcType=VARCHAR},join_addr2=#{join_addr2,jdbcType=VARCHAR},join_email=#{join_email,jdbcType=VARCHAR}
+		where join_id=#{join_id,jdbcType=VARCHAR}
+	</update>
+	
+	<insert id="insertData" parameterType="com.chan.dto.ProductDTO">
+	 	insert into product
+	 	(product_id,product_subject,product_price,product_discount,product_resultPrice,product_stock,
+	 	product_keep,product_buypoint,product_mainSaveFileName,product_contentSaveFileName,product_saleLimit,
+	 	product_firstSelect,product_secondSelect,product_lastSelect,product_delivery1,product_delivery2,product_delivery3
+	 	,product_saleCount,product_recommand) 
+	 	values
+	 	(#{product_id},#{product_subject},#{product_price},#{product_discount},(#{product_price}*(100-#{product_discount})/100),
+	 	#{product_stock},#{product_keep},#{product_buypoint},#{product_mainSaveFileName},#{product_contentSaveFileName},
+	 	#{product_saleLimit},#{product_firstSelect},#{product_secondSelect},#{product_lastSelect},
+	 	#{product_delivery1},#{product_delivery2},#{product_delivery3},0,0)
+	</insert>
+	
+	<insert id="detailInsertData" parameterType="com.chan.dto.ProductDTO">
+	 	insert into productDetail
+	 	(product_id,productDetail_name,productDetail_volume,productDetail_made,productDetail_origin,
+	 	productDetail_created,productDetail_counseling,productDetail_configuration)
+	 	values
+	 	(#{product_id},#{productDetail_name},#{productDetail_volume},#{productDetail_made},#{productDetail_origin},
+	 	#{productDetail_created},#{productDetail_counseling},#{productDetail_configuration})
+	</insert>
+	
+	<select id="adminProductQnaList" resultType="com.chan.dto.AdminDTO">
+		select * from(
+		select rownum rnum,data.* from(
+		select productQuestion_id,join_id,product_id,productQuestion_type,product_subject,productquestion_state,
+		productQuestion_content,to_char(productQuestion_created,'YYYY-MM-DD') as productQuestion_created,productQuestion_secret
+		from productQuestion where productquestion_state = '미답변'
+		order by productQuestion_id desc) data)
+		<![CDATA[
+	 	where rnum>=#{start} and rnum<=#{end}
+	 	]]>
+	</select>
+	
+	<select id="adminProductQnaDataCount" resultType="Integer">
+		select nvl(count(*),0) from productQuestion where productQuestion_state = '미답변'
+	</select>
+	
+	<select id="adminProductQnaData" parameterType="Integer" resultType="com.chan.dto.AdminDTO">
+		select productQuestion_id,join_id,product_id,productQuestion_type,product_subject,
+		productQuestion_content,to_char(productQuestion_created,'YYYY-MM-DD') as productQuestion_created,productQuestion_secret
+		from productQuestion where productquestion_state = '미답변' and productQuestion_id = #{productQuestion_id,jdbcType=VARCHAR}
+		order by productQuestion_id desc
+	</select>
+	
+	<select id="maxProductAnswerId" resultType="int">
+		select nvl(max(productAnswer_id),0) from productAnswer
+	</select>
+	
+	<insert id="productAnswerInsertData" parameterType="com.chan.dto.AdminDTO">
+	 	insert into productAnswer (productAnswer_id,join_id,product_id,productQuestion_id,
+	 	productAnswer_created,productAnswer_content) values (#{productAnswer_id},#{join_id},#{product_id},
+	 	#{productQuestion_id},to_char(sysdate,'YYYY-MM-DD'),#{productAnswer_content})
+	</insert>
+	
+	<update id="productQnaCompete" parameterType="Integer">
+		update productQuestion set productQuestion_state = '답변완료'
+		where productQuestion_id = #{productQuestion_id}
+	</update>
+	
+	<insert id="bestReviewPointInsertData" parameterType="String">
+	 	insert into point (point_id,join_id,point_score,point_created,point_content,point_use)
+	 	values ((select nvl(max(point_id),0)+1 from point),#{join_id},'10000',to_char(sysdate,'YYYY-MM-DD'),'베스트 리뷰 선정','1')
+	</insert>
+	
+	<update id="userPointUpdate" parameterType="String">
+		update join set join_point = nvl(join_point,0) + 10000
+		where join_id = #{join_id}
+	</update>
+
+<!-- //회원관리 -->
+<!-- 쿠폰 -->
+
+	<!-- 1. 쿠폰 삽입 -->
+	<select id="couponMaxNum" resultType="int">
+		select nvl(max(coupon_id),0) from coupon
+	</select>
+	
+	
+	<select id="getIdCount" parameterType="String" resultType="int">
+		select nvl(count(*),0) from join where join_id like #{search_join_id} || '%'	
+	</select>
+	
+	
+	<select id="getIdList" parameterType="hashMap" resultType="com.chan.dto.AdminDTO">	
+		select * from (	select rownum rnum, data.* from (
+		select join_id from join where join_id like #{search_join_id}|| '%') data)
+	<![CDATA[
+		where rnum>=#{start} and rnum<=#{end}
+	]]>
+	</select>
+	
+	
+	<insert id="insertCoupon" parameterType="com.chan.dto.AdminDTO">
+		insert into coupon(coupon_id,join_id,coupon_price,coupon_startDate,coupon_endDate,coupon_use)values(
+		#{coupon_id},#{join_id},#{coupon_price},sysdate,ADD_MONTHS(sysdate, 3),1)
+	</insert>
+
+	<!-- 2. 쿠폰삭제 -->
+	
+	<select id="getCouponCount" parameterType="String" resultType="int">
+		select nvl(count(*),0) from coupon where join_id like #{search_join_id,jdbcType=VARCHAR} || '%'	
+	</select>
+	
+	
+	<select id="getCouponList" parameterType="hashMap" resultType="com.chan.dto.AdminDTO">
+		select * from (
+		select rownum rnum, data.* from (
+		select coupon_id,join_id,coupon_price,to_char(coupon_startDate,'YYYY-MM-DD') coupon_startDate,
+		to_char(coupon_endDate,'YYYY-MM-DD') coupon_endDate 
+		from coupon where join_id like #{search_join_id,jdbcType=VARCHAR} || '%' and coupon_use=1
+		order by coupon_id desc) data)
+		<![CDATA[
+		where rnum>=#{start} and rnum<=#{end}
+		]]>
+	</select>
+	
+	<delete id="deleteCoupon" parameterType="int"  >
+		delete coupon where coupon_id=#{coupon_id,jdbcType=VARCHAR}
+	</delete>
+
+	<!-- 3. 유효기간 지난거 삭제 -->
+	
+	<select id="getLastCouponCount" resultType="int">
+		<![CDATA[
+		select nvl(count(*),0) from coupon where coupon_endDate 
+		< to_char(sysdate,'YYYY-MM-DD')]]>	
+	
+	</select>
+	
+	<select id="getLastCouponList" parameterType="hashMap" resultType="com.chan.dto.AdminDTO">
+		<![CDATA[
+		select * from (
+		select rownum rnum, data.* from (
+		select coupon_id,join_id,coupon_price,to_char(coupon_startDate,'YYYY-MM-DD') coupon_startDate,
+		to_char(coupon_endDate,'YYYY-MM-DD') coupon_endDate 
+		from coupon where coupon_endDate < to_char(sysdate,'YYYY-MM-DD')
+		order by coupon_id desc) data)
+		where rnum>=#{start} and rnum<=#{end}
+		]]>
+	</select>
+	
+	
+	<delete id="deleteAllCoupon"   >
+		<![CDATA[
+		delete coupon where coupon_endDate < to_date(sysdate,'YYYY-MM-DD')]]>	
+	</delete>
+<!-- //쿠폰 -->
+
+<!-- 주문관리 -->
+	<!-- 주문 갯수 -->
+	<select id="orderListCount" resultType="Integer">
+		select nvl(count(*),0) from orderList where orderList_step!=0 and orderList_step!=6 and orderList_step!=7 and orderList_step!=8 and orderList_step!=9
+	</select>
+	
+	<!-- 주문 승인 대기 리스트 -->
+	<select id="orderListCheck" resultType="com.chan.dto.AdminDTO" parameterType="hashMap">
+	 	select * from (
+		select rownum rnum, data.* from (
+		select A.orderList_id,productOrder_id,join_id,B.product_id,A.orderList_resultPrice,B.product_subject,coupon_id,point_id,to_char(orderList_created,'YYYY-MM-DD') orderList_created,orderList_naturePackage,orderList_recyclePackage,orderList_step,cart_quantity,orderList_productCount
+		from orderList A,(select productOrder_id,orderList_id,product_subject,cart_quantity,product_id,product_resultPrice from productOrder) B 
+		where A.orderList_id=B.orderList_id and productOrder_id=1
+		and (orderList_step!=0 and orderList_step!=6 and orderList_step!=7 and orderList_step!=8 and orderList_step!=9)
+		order by orderList_id desc) data)
+		<![CDATA[
+		where rnum>=#{start} and rnum<=#{end}
+		]]>
+	</select>
+	
+	<!-- orderList_step 수정 -->
+	<update id="updateStep" parameterType="com.chan.dto.AdminDTO">
+		update orderList set orderList_step=#{orderList_step} where orderList_id=#{orderList_id}
+	</update>
+
+<!-- //orderList -->
+<!-- 1:1 상품문의 -->
+	<!-- 1:1 상담 내역 불러오기(count) -->
+	<select id="qnaCount" resultType="Integer">
+		select nvl(count(*),0) from qna where qna_state='미답변'
+		
+			</select>
+	
+	<!-- 1:1 상담 내역 불러오기(list) -->
+	<select id="qnaList" parameterType="hashMap" resultType="com.chan.dto.AdminDTO">
+		select * from (
+		select rownum rnum, data.* from (
+		select qna_id,join_id,qna_select,qna_type,qna_state,qna_subject,qna_content,to_char(qna_created,'YYYY-MM-DD') qna_created,qna_saveFileName from qna where qna_state='미답변'
+		order by qna_id desc) data)
+		<![CDATA[
+		where rnum>=#{start} and rnum<=#{end}
+		]]>
+	</select>
+	
+	<!-- 답변 입력 -->
+	<update id="qnaReply" parameterType="com.chan.dto.AdminDTO">
+		update qna set qna_reply=#{qna_reply}, qna_state='답변완료' where qna_id=#{qna_id}
+	</update>
+	
+	<!-- 1개 데이터 가져오기 -->
+	<select id="adminQnaData" parameterType="Integer" resultType="com.chan.dto.AdminDTO">
+		select qna_id,join_id,qna_select,qna_type,qna_subject,qna_content,to_char(qna_created,'YYYY-MM-DD') as qna_created,qna_saveFileName
+		from qna where qna_state = '미답변' and qna_id = #{qna_id,jdbcType=VARCHAR}
+		order by qna_id desc
+	</select>
+	
+<!-- //1:1 상품문의 -->
+<!-- 상품추천내역 -->
+	<!-- 상품추천내역 리스트 -->
+	<select id="productRecommandLists" parameterType="map" resultType="com.chan.dto.AdminDTO">
+		select * from(
+		select rownum rnum,data.* from(
+		select productRecommand_id,join_id,product_id,product_subject,productRecommand_reason
+		from productRecommand
+		where productRecommand_point = 0 and productRecommand_look = 'noLook'
+		order by productRecommand_id desc) data)
+		<![CDATA[
+		where rnum>=#{start} and rnum<=#{end}
+		]]>
+	</select>
+	
+	<!-- 상품추천 데이터 갯수 -->
+	<select id="productRecommandCount" resultType="int">
+		select count(*) from productRecommand
+		where productRecommand_point = 0 and productRecommand_look = 'noLook'
+	</select>
+	
+	<!-- 확인한 상품추천 변경 -->
+	<update id="productRecommandUpdate" parameterType="int">
+		update productRecommand set productRecommand_look = 'look'
+		where productRecommand_id = #{productRecommand_id}
+	</update>
+	
+	<!-- 관리자 상품추천 채택 -->
+	<update id="productRecommandSelect" parameterType="map">
+		update productRecommand set productRecommand_look = 'look', productRecommand_point = '1'
+		where productRecommand_id = #{productRecommand_id}
+	</update>
+	
+	<!-- 사용자에게 포인트 부여 -->
+	<insert id="recommandPoint" parameterType="String">
+		insert into point (point_id,join_id,point_score,point_created,point_content,point_use) values
+		((select nvl(max(point_id),0)+1 from point),#{join_id},'3000',
+		to_char(sysdate,'YYYY-MM-DD'),'상품추천 채택에의한 포인트부여','1')
+	</insert>
+	
+	<update id="recommandPointUpdate" parameterType="String">
+		update join set join_point = join_point + 3000
+		where join_id = #{join_id}
+	</update>
+
+<!-- //상품추천내역 -->
+</mapper>

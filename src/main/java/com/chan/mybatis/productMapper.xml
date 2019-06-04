@@ -1,0 +1,378 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="product">
+
+<!-- 추천상품보기 -->
+<select id="mdSelect" parameterType="hashMap" resultType="com.chan.dto.ProductDTO">
+	select * from (
+	select rownum rnum, data.* from (
+	select product_id ,
+	product_subject,product_mainSaveFileName,product_firstSelect,product_secondSelect
+	from product where PRODUCT_FIRSTSELECT like '%' || #{firstSelect} || '%'
+	and (PRODUCT_SECONDSELECT like '%' || #{secondSelect} || '%' or
+	PRODUCT_SECONDSELECT is null )
+	and (PRODUCT_LASTSELECT like '%' || #{lastSelect} || '%' or
+	PRODUCT_LASTSELECT is null)
+	<![CDATA[
+	and product_id <> #{product_id}
+	and product_stock <> '0'
+	order by DBMS_RANDOM.value) data)
+	where rownum<=#{end}
+	]]>
+</select>
+
+<select id="maxId" resultType="int">
+	select nvl(max(product_id),0) from product
+</select>
+
+<select id="getDataCount" parameterType="map" resultType="int">
+ 	select nvl(count(*),0) from
+	(select a.product_id,a.product_subject,b.productDetail_configuration
+	from product a,productDetail b
+	where a.product_id = b.product_id 
+	and b.productDetail_configuration like '%' || #{searchValue,jdbcType=VARCHAR} || '%'
+	and a.product_subject like '%' || #{searchValue,jdbcType=VARCHAR} || '%'
+	and a.product_firstSelect like '%' || #{firstSelect,jdbcType=VARCHAR} || '%'
+	and a.product_secondSelect like '%' || #{secondSelect,jdbcType=VARCHAR} || '%'
+	and a.product_lastSelect like '%' || #{lastSelect,jdbcType=VARCHAR} || '%')
+</select>
+
+<select id="getEventDataCount" parameterType="map" resultType="int">
+ 	select nvl(count(*),0) from
+	(select a.product_id,a.product_subject,b.productDetail_configuration
+	from product a,productDetail b
+	where a.product_id = b.product_id 
+	and b.productDetail_configuration like '%' || #{searchValue,jdbcType=VARCHAR} || '%'
+	and a.product_subject like '%' || #{searchValue,jdbcType=VARCHAR} || '%'
+	and a.product_firstSelect like '%' || #{firstSelect,jdbcType=VARCHAR} || '%'
+	and a.product_secondSelect like '%' || #{secondSelect,jdbcType=VARCHAR} || '%')
+</select>
+
+<select id="getEtcDataCount" parameterType="map" resultType="int">
+ 	select nvl(count(*),0) from
+	(select a.product_id,a.product_subject,b.productDetail_configuration
+	from product a,productDetail b
+	where a.product_id = b.product_id 
+	and b.productDetail_configuration like '%' || #{searchValue,jdbcType=VARCHAR} || '%'
+	and a.product_subject like '%' || #{searchValue,jdbcType=VARCHAR} || '%'
+	and a.product_firstSelect like '%' || #{firstSelect,jdbcType=VARCHAR} || '%')
+</select>
+
+<select id="getLists" parameterType="map" resultType="com.chan.dto.ProductDTO">
+ 	select * from (
+ 	select rownum rnum,data.* from(
+ 	select a.product_id,a.product_subject,a.product_price,a.product_discount,a.product_resultPrice,
+	a.product_mainSaveFileName,a.product_firstSelect,a.product_secondSelect,a.product_lastSelect,
+	a.product_like,b.productDetail_configuration
+	from product a,productDetail b
+<![CDATA[
+	where a.product_id = b.product_id and product_stock <> '0'
+	and (b.productDetail_configuration like '%' || #{searchValue,jdbcType=VARCHAR} ||'%'
+	or a.product_subject like '%' || #{searchValue,jdbcType=VARCHAR} || '%')
+	and a.product_firstSelect like '%' || #{firstSelect,jdbcType=VARCHAR} || '%'
+	and a.product_secondSelect like '%' || #{secondSelect,jdbcType=VARCHAR} || '%'
+	and a.product_lastSelect like '%' || #{lastSelect,jdbcType=VARCHAR} || '%'
+	order by ${sort} ${direction}) data)
+ 	where rnum>=#{start} and rnum<=#{end}
+]]>
+</select>
+
+<select id="getBestLists" parameterType="map" resultType="com.chan.dto.ProductDTO">
+	select data.* from(
+	select rownum bestNum,product_id,product_subject,product_price,product_resultPrice,product_mainSaveFileName,
+	product_firstSelect,product_secondSelect,product_lastSelect
+	from product where product_firstSelect like '%' || #{firstSelect,jdbcType=VARCHAR} || '%'
+	and product_secondSelect like '%' || #{secondSelect,jdbcType=VARCHAR} || '%'
+<![CDATA[
+	and product_stock <> '0'
+	order by product_saleCount desc) data
+ 	where bestNum<=6
+]]>
+</select>
+
+<select id="getMenuLists" parameterType="map" resultType="com.chan.dto.ProductDTO">
+	select productTag_firstSelect,productTag_secondSelect,productTag_lastSelect from productTag
+	where productTag_firstSelect = #{firstSelect,jdbcType=VARCHAR} and productTag_secondSelect = #{secondSelect,jdbcType=VARCHAR}
+</select>
+
+<select id="getReadData" parameterType="int" resultType="com.chan.dto.ProductDTO">
+ 	select a.product_id,a.product_subject,a.product_price,a.product_discount,a.product_resultPrice,a.product_keep,a.product_delivery1,
+ 	a.product_delivery2,a.product_delivery3,a.product_buypoint,a.product_mainsavefilename,a.product_contentsavefilename,
+ 	a.product_firstselect,a.product_secondselect,a.product_lastselect,a.product_saleLimit,a.product_like,
+	b.productdetail_name,b.productdetail_volume,b.productdetail_made,b.productdetail_origin,
+	b.productdetail_counseling,b.productdetail_configuration,b.productDetail_created from product a, productdetail b
+	where a.product_id = b.product_id and a.product_id = #{product_id}
+</select>
+
+<select id="maxProductQnaId" resultType="int">
+	select nvl(max(productQuestion_id),0) from productQuestion
+</select>
+
+<insert id="productQnaInsertData" parameterType="com.chan.dto.ProductDTO">
+	insert into productQuestion
+	(productQuestion_id,join_id,product_id,productQuestion_type,productQuestion_state,
+	product_subject,productQuestion_content,productQuestion_created,productQuestion_secret) values
+	(#{productQuestion_id},#{join_id},#{product_id},#{productQuestion_type},'미답변',
+	#{product_subject},#{productQuestion_content},to_char(sysdate,'YYYY-MM-DD'),#{productQuestion_secret})
+</insert>
+
+<select id="productQnaList" parameterType="map" resultType="com.chan.dto.ProductDTO">
+	select * from(
+	select rownum rnum,data.* from(
+	select productQuestion_id,replace(join_id,substr(join_id,-4,4), '****') as join_id,product_id,productQuestion_type,productQuestion_state,
+	product_subject,productQuestion_content,to_char(productQuestion_created,'YYYY-MM-DD') as productQuestion_created,productQuestion_secret
+	from productQuestion where product_id = #{product_id}
+	order by productQuestion_id desc) data)
+	<![CDATA[
+ 	where rnum>=#{start} and rnum<=#{end}
+ 	]]>
+</select>
+
+<select id="productQnaDataCount" parameterType="int" resultType="Integer">
+	select nvl(count(*),0) from productQuestion where product_id = #{product_id}
+</select>
+
+<select id="productQnaMyList" parameterType="map" resultType="com.chan.dto.ProductDTO">
+	select * from(
+	select rownum rnum,data.* from(
+	select productQuestion_id,join_id,product_id,productQuestion_type,productQuestion_state,
+	product_subject,productQuestion_content,to_char(productQuestion_created,'YYYY-MM-DD') as productQuestion_created,productQuestion_secret
+	from productQuestion where product_id = #{product_id,jdbcType=VARCHAR} and join_id = #{join_id,jdbcType=VARCHAR}
+	order by productQuestion_id desc) data)
+	<![CDATA[
+ 	where rnum>=#{start} and rnum<=#{end}
+ 	]]>
+</select>
+
+<select id="productQnaMyDataCount" parameterType="map" resultType="Integer">
+	select nvl(count(*),0) from productQuestion where product_id = #{product_id} and join_id = #{join_id,jdbcType=VARCHAR}
+</select>
+
+<select id="productAnswerList" resultType="com.chan.dto.ProductDTO">
+	select a.productAnswer_id,a.product_id,a.productQuestion_id,to_char(a.productAnswer_created,'YYYY.MM.DD') as productAnswer_created,a.productAnswer_content
+	from productAnswer a, productQuestion b
+	where a.productQuestion_id = b.productQuestion_id and b.productQuestion_id = #{productQuestion_id}
+</select>
+
+<select id="productReviewAllDataCount" parameterType="int" resultType="Integer">
+	select nvl(count(*),0) from review where product_id = #{product_id}
+</select>
+
+<select id="productReviewPhotoDataCount" parameterType="int" resultType="Integer">
+	select nvl(count(*),0) from review where product_id = #{product_id} and review_saveFileName like '%%'
+</select>
+
+<select id="productReviewAllList" parameterType="map" resultType="com.chan.dto.ProductDTO">
+	select * from (
+	select rownum rnum, data.* from (
+	select review_id,review_grade,review_subject,review_content,review_saveFileName,product_id,
+	replace(join_id,substr(join_id,-4,4), '****') as join_id,to_char(review_created,'YYYY.MM.DD') as review_created
+	from review where product_id = #{product_id,jdbcType=VARCHAR} order  by review_id desc) data)
+	<![CDATA[
+	where rnum>=#{start} and rnum<=#{end}
+	]]>
+</select>
+
+<select id="productReviewPhotoList" parameterType="map" resultType="com.chan.dto.ProductDTO">
+	select * from (
+	select rownum rnum, data.* from (
+	select review_id,review_grade,review_subject,review_content,review_saveFileName,product_id,
+	replace(join_id,substr(join_id,-4,4), '****') as join_id,to_char(review_created,'YYYY.MM.DD') as review_created
+	from review where product_id = #{product_id,jdbcType=VARCHAR} and review_saveFileName like '%%' order  by review_id desc) data)
+	<![CDATA[
+	where rnum>=#{start} and rnum<=#{end}
+	]]>
+</select>
+
+<select id="getReviewData" parameterType="map" resultType="com.chan.dto.ProductDTO">
+	select review_id,product_id,review_grade,review_subject,review_content,review_saveFileName,
+	join_id,to_char(review_created,'YYYY.MM.DD') as review_created
+	from review where product_id = #{product_id,jdbcType=VARCHAR} and review_id = #{review_id,jdbcType=VARCHAR}
+</select>
+
+<insert id="bestReviewInsertData" parameterType="com.chan.dto.ProductDTO">
+ 	insert into bestReview
+ 	(bestReview_id,join_id,product_id,bestReview_subject,bestReview_content,bestReview_created,
+ 	bestReview_grade,bestReview_saveFileName) values
+ 	((select nvl(max(bestReview_id),0)+1 from bestReview),#{join_id},#{product_id},#{bestReview_subject},#{bestReview_content},#{bestReview_created},
+ 	#{bestReview_grade},#{bestReview_saveFileName,jdbcType=VARCHAR})
+</insert>
+
+<select id="bestReviewDataCount" resultType="Integer">
+	select nvl(count(*),0) from bestReview
+</select>
+
+<select id="bestReviewList" parameterType="map" resultType="com.chan.dto.ProductDTO">
+	select * from (
+	select rownum rnum, data.* from (
+	select bestReview_id,bestReview_subject,substr(bestReview_content,1,15) as bestReview_content,bestReview_grade,bestReview_saveFileName,product_id,
+	replace(join_id,substr(join_id,-4,4), '****') as join_id,to_char(bestReview_created,'YYYY.MM.DD') as bestReview_created
+	from bestReview order by bestReview_id desc) data)
+	<![CDATA[
+	where rnum>=#{start} and rnum<=#{end}
+	]]>
+</select>
+
+<select id="bestReviewProductData" resultType="com.chan.dto.ProductDTO">
+	select product_subject,product_mainSaveFileName,product_firstSelect,product_secondSelect,product_lastSelect	from product
+	where product_id = #{product_id,jdbcType=VARCHAR}
+</select>
+
+<!-- 검색 -->
+<select id="searchProductDatacount"  resultType="Integer">
+	select  count(*) from (
+	select a.product_id,a.product_subject,a.product_firstSelect,a.product_secondSelect,a.product_lastSelect, a.product_price, a.product_discount,
+		   a.product_mainSaveFileName, b.productDetail_name, b.productDetail_configuration
+	from product a, productdetail b where  a.product_id = b.product_id and (a.product_subject like '%' || #{keyword,jdbcType=VARCHAR} || '%' or b.productDetail_configuration like '%' || #{keyword,jdbcType=VARCHAR} || '%'
+	or b.PRODUCTDETAIL_NAME like '%' || #{keyword} || '%'))
+</select>
+
+
+<select id="searchProduct" parameterType="map" resultType="com.chan.dto.ProductDTO">
+	select * from (
+	select rownum rnum,data.* from (
+	select a.product_id,a.product_subject, a.product_price,a.product_firstSelect,a.product_secondSelect,
+	a.product_lastSelect,a.product_resultPrice,a.product_discount,a.product_mainSaveFileName,
+	b.productDetail_name, b.productDetail_configuration
+	from product a, productdetail b where a.product_id=b.product_id and (a.product_subject like '%' || #{keyword,jdbcType=VARCHAR} || '%' or b.productDetail_configuration like '%' || #{keyword,jdbcType=VARCHAR} || '%'
+	or b.PRODUCTDETAIL_NAME like '%' || #{keyword,jdbcType=VARCHAR} || '%')
+	order by ${sort} ${direction} ) data)
+	 <![CDATA[
+	where rnum>=#{start} and rnum<=#{end}
+	]]>
+</select>
+
+<insert id="zzimListInsert" parameterType="com.chan.dto.ProductDTO">
+	insert into zzimList (zzimList_id,join_id,product_id,product_subject,product_mainSaveFileName,
+	product_price,product_discount,product_resultPrice) values
+	((select nvl(max(zzimList_id),0)+1 from zzimList),#{join_id,jdbcType=VARCHAR},#{product_id,jdbcType=VARCHAR}
+	,#{product_subject,jdbcType=VARCHAR},#{product_mainSaveFileName,jdbcType=VARCHAR},
+	#{product_price,jdbcType=VARCHAR},#{product_discount,jdbcType=VARCHAR},#{product_resultPrice,jdbcType=VARCHAR})
+</insert>
+
+
+<select id="onlyZzimList" parameterType="String" resultType="com.chan.dto.RecipeDTO">
+	select zzimList_id from zzimList where join_id = #{join_id,jdbcType=VARCHAR}
+</select>
+
+<!-- best product -->	
+<select id="best5ProductList" resultType="com.chan.dto.ProductDTO">
+	select * from(
+	select rownum bestNum, data.* from	(
+	select * from product order by product_saleCount desc) data) 
+	<![CDATA[
+	where bestNum>=1 and bestNum<=5
+	]]>
+</select>
+
+<select id="bestProductList" resultType="com.chan.dto.ProductDTO">
+	select * from(
+	select rownum bestNum, data.* from	(
+	select * from product order by product_saleCount desc) data) 
+	<![CDATA[
+	where bestNum>=6 and bestNum<=50
+	]]>
+</select>
+
+<!-- 상품추천 -->
+<select id="productRecommandList" parameterType="String" resultType="com.chan.dto.ProductDTO">
+	select product_id,product_subject from productOrder
+	where join_id = #{join_id} and orderList_id = (select max(orderList_id) from orderList)
+	order by orderList_id desc
+</select>
+
+<select id="productRecommandCount" parameterType="String" resultType="int">
+	select count(*) from productOrder
+	where join_id = #{join_id} and orderList_id = (select max(orderList_id) from orderList)
+</select>
+
+<insert id="insertProductRecommand" parameterType="map">
+	insert into productRecommand (productRecommand_id,join_id,product_id,product_subject,
+	productRecommand_reason,productRecommand_point,productRecommand_look) values
+	((select nvl(max(productRecommand_id),0)+1 from productRecommand),#{join_id},#{product_id},
+	#{product_subject},#{productRecommand_reason},'0','noLook')
+</insert>
+
+<update id="updateProductRecommand" parameterType="int">
+	update product set product_recommand = product_recommand + 1
+	where product_id = #{product_id}
+</update>
+
+<select id="bestRecommandLists" resultType="com.chan.dto.ProductDTO">
+	select * from (
+	select rownum productRecommand_num,data.* from(
+	select product_id,product_subject,product_price,product_discount,product_resultPrice,product_like,
+	product_firstSelect,product_secondSelect,product_lastSelect,product_mainSaveFileName from product
+	order by product_recommand desc) data)
+	<![CDATA[
+	where productRecommand_num>=1 and productRecommand_num<=2
+	]]>
+</select>
+
+<select id="recommandLists" resultType="com.chan.dto.ProductDTO">
+	select * from (
+	select rownum productRecommand_num,data.* from(
+	select product_id,product_subject,product_price,product_discount,product_resultPrice,product_like,
+	product_firstSelect,product_secondSelect,product_lastSelect,product_mainSaveFileName from product
+	order by product_recommand desc) data)
+	<![CDATA[
+	where productRecommand_num>=3 and productRecommand_num<=26
+	]]>
+</select>
+
+<!-- 상품추천 끝 -->
+
+<select id="cookieList" parameterType="int" resultType="com.chan.dto.ProductDTO">
+select product_id,product_subject,product_price,product_discount,product_resultPrice,
+	product_mainSaveFileName,product_firstSelect,product_secondSelect,product_lastSelect,
+	product_like
+	from product 
+	where product_id=#{product_id}
+</select>
+
+
+<select id="getOriginLists" parameterType="map" resultType="com.chan.dto.ProductDTO">
+ 	select * from (
+ 	select rownum rnum,data.* from(
+ 	select a.product_id,a.product_subject,a.product_price,a.product_discount,a.product_resultPrice,
+	a.product_mainSaveFileName,a.product_firstSelect,a.product_like,
+	b.productDetail_configuration
+	from product a,productDetail b
+	where a.product_id = b.product_id
+	and (b.productDetail_configuration like '%' || #{searchValue,jdbcType=VARCHAR} ||'%'
+	or a.product_subject like '%' || #{searchValue,jdbcType=VARCHAR} || '%')
+	and a.product_firstSelect like '%' || #{firstSelect,jdbcType=VARCHAR} || '%'
+	order by a.product_id asc) data)
+ <![CDATA[
+ 	where rnum>=#{start} and rnum<=#{end}
+ ]]>
+</select>
+
+<select id="getEventLists" parameterType="map" resultType="com.chan.dto.ProductDTO">
+ 	select * from (
+ 	select rownum rnum,data.* from(
+ 	select a.product_id,a.product_subject,a.product_price,a.product_discount,a.product_resultPrice,
+	a.product_mainSaveFileName,a.product_firstSelect,a.product_secondSelect,
+	b.productDetail_configuration
+	from product a,productDetail b
+	where a.product_id = b.product_id
+	and (b.productDetail_configuration like '%' || #{searchValue,jdbcType=VARCHAR} ||'%'
+	or a.product_subject like '%' || #{searchValue,jdbcType=VARCHAR} || '%')
+	and a.product_firstSelect like '%' || #{firstSelect,jdbcType=VARCHAR} || '%'
+	and a.product_secondSelect like '%' || #{secondSelect,jdbcType=VARCHAR} || '%'
+	order by ${sort} ${direction}) data)
+ <![CDATA[
+ 	where rnum>=#{start} and rnum<=#{end}
+ ]]>
+</select>
+
+<select id="getOtherMenuLists" parameterType="map" resultType="com.chan.dto.ProductDTO">
+	select productTag_firstSelect,productTag_secondSelect,productTag_lastSelect from productTag
+	where productTag_firstSelect = #{firstSelect,jdbcType=VARCHAR} 
+</select>
+
+</mapper>
