@@ -70,7 +70,7 @@ var imgUrl = "http://www.oasis.co.kr:8580";
 //]]>
 </script>
 
-<!-- 현우 -->
+<!-- 현진 -->
 
 <script type="text/javascript">
 
@@ -425,7 +425,8 @@ function useCoupon() {
                                 </tbody>
                             </table>
                             
-                            <!-- 현우2 -->
+				
+                            <!-- 현진2 -->
                             <script type="text/javascript">
                             
                             $("#couponId").change(function() {
