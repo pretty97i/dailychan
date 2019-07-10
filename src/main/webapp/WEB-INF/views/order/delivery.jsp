@@ -599,7 +599,7 @@ wcs_do(_nasa);
     </script>
    
     
-<!-- 현우가 만든 스크립트 -->
+<!-- 현진이가 만든 스크립트 -->
 <script type="text/javascript">
 
 var oldVal;
@@ -754,7 +754,7 @@ function orderComfirm() {
 
 </script>
 
-<!-- //현우가 만든 스크립트 -->
+<!-- //현진이가 만든 스크립트 -->
 
 </head>
 
