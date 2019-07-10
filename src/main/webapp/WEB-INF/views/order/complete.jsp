@@ -645,7 +645,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
         }
     </script>
 
-<!-- 현진 -->
+<!-- 삭제금지 -->
 
 <script type="text/javascript">
 
